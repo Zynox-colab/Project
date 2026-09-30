@@ -14,3 +14,23 @@ operation = st.selectbox(
 )
 
 #Calculate
+if st.button("Calculate"):
+    if operation == "Addition":
+        result = num1 + num2
+
+    elif operation == "Subtraction":
+        result = num1 - num2
+
+    elif operation == "Multiplication":
+        result = num1 * num2
+
+    elif operation == "Division":
+        if num2 == 0:
+            st.error("❌ Cannot divide by zero!")
+            result = None
+        else:
+            result = num1 / num2
+
+  # Display result
+    if result is not None:
+        st.success(f"Result: {result}")
