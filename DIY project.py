@@ -1,56 +1,99 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import streamlit.components.v1 as components
 
-st.title(" Gamer Reaction Test")
-st.write("Click the circle as many times as you can!")
+st.title("🎮 Gamer Aim Trainer")
+st.write("Click as many circles as you can!")
 
-if "scores" not in st.session_state:
-    st.session_state.scores = []
+duration = st.selectbox("Game duration", [30, 60, 120])
 
-if "position" not in st.session_state:
-    st.session_state.position = 50
-
-if "game_over" not in st.session_state:
-    st.session_state.game_over = False
-
-st.markdown(
-    f"""
-    <div style="text-align:center; padding:20px;">
-        <a href="?hit={st.session_state.position}"
-           style="display:inline-block; width:65px; height:65px;
-           line-height:65px; border-radius:50%; background:#22c55e;
-           color:white; text-decoration:none; font-size:25px;">
-        </a>
+game = """
+<div style="background:#111827;color:white;padding:12px;border-radius:12px;text-align:center">
+    <h3>Time: <span id="timer">30</span>s</h3>
+    <h3>Score: <span id="score">0</span></h3>
+    <div id="arena" style="height:400px;position:relative;background:#1f2937;overflow:hidden;border-radius:10px">
+        <button id="target" style="position:absolute;width:45px;height:45px;border-radius:50%;background:#22c55e;border:0;left:40%;top:40%;cursor:pointer"></button>
     </div>
-    """,
-    unsafe_allow_html=True
+    <button id="start" style="margin:12px;padding:10px">Start Game</button>
+    <h3 id="result"></h3>
+</div>
+
+<script>
+let score = 0;
+let seconds = __DURATION__;
+let playing = false;
+let timerID;
+
+const arena = document.getElementById("arena");
+const target = document.getElementById("target");
+
+document.getElementById("start").onclick = function() {
+    score = 0;
+    seconds = __DURATION__;
+    playing = true;
+    this.disabled = true;
+    document.getElementById("score").textContent = score;
+    document.getElementById("result").textContent = "";
+    target.style.display = "block";
+
+    timerID = setInterval(function() {
+        seconds--;
+        document.getElementById("timer").textContent = seconds;
+
+        if (seconds <= 0) {
+            clearInterval(timerID);
+            playing = false;
+            target.style.display = "none";
+            document.getElementById("start").disabled = false;
+            document.getElementById("result").textContent =
+                "Final Score: " + score;
+        }
+    }, 1000);
+};
+
+target.onclick = function() {
+    if (!playing) return;
+
+    score++;
+    document.getElementById("score").textContent = score;
+
+    const maxX = arena.clientWidth - target.offsetWidth;
+    const maxY = arena.clientHeight - target.offsetHeight;
+
+    target.style.left = Math.floor(Math.random() * maxX) + "px";
+    target.style.top = Math.floor(Math.random() * maxY) + "px";
+};
+</script>
+</div>
+"""
+
+components.html(
+    game.replace("__DURATION__", str(duration)),
+    height=510
 )
 
-if st.button("Hit Circle"):
-    st.session_state.scores.append(300)
-    st.session_state.position = int(
-        np.random.randint(1, 100)
-    )
-    st.rerun()
+st.subheader("📊 Performance Analysis")
 
-if st.button("Show Results"):
-    st.session_state.game_over = True
+score_input = st.number_input(
+    "Enter your final score shown in the game",
+    min_value=0,
+    step=1
+)
 
-if st.session_state.game_over:
-    if st.session_state.scores:
-        scores = np.array(st.session_state.scores)
+if st.button("Analyze Performance"):
+    scores = np.array([score_input])
 
-        st.subheader("🏆 Your Results")
-        st.write("Total Hits:", len(scores))
-        st.write("Average Reaction Time:", round(np.mean(scores)), "ms")
-        st.write("Best Reaction Time:", np.min(scores), "ms")
+    df = pd.DataFrame({
+        "Metric": ["Final Score"],
+        "Value": [int(np.sum(scores))]
+    })
 
-        df = pd.DataFrame({
-            "Attempt": range(1, len(scores) + 1),
-            "Reaction Time (ms)": scores
-        })
+    st.dataframe(df, hide_index=True)
 
-        st.dataframe(df)
+    if score_input >= duration * 1.5:
+        st.success("Excellent performance! ⚡")
+    elif score_input >= duration:
+        st.info("Good job! Keep practising. 🎯")
     else:
-        st.warning("Play the game first!")
+        st.warning("Keep training to improve your aim! 💪")
